@@ -72,9 +72,9 @@ class Block(nn.Module):
 class GPTConfig:
     block_size: int = 1024 # max sequence length
     vocab_size: int = 50257 # number of tokens: 50,000 BPE merges + 256 bytes tokens + 1 <|endoftext|> token
-    n_layer: int = 12 # number of layers
-    n_head: int = 12 # number of heads
-    n_embd: int = 768 # embedding dimension
+    n_layer: int = 2 # number of layers
+    n_head: int = 2 # number of heads
+    n_embd: int = 2 # embedding dimension
 
 class GPT(nn.Module):
 
@@ -211,45 +211,77 @@ def load_tokens(filename):
     ptt = torch.tensor(npt, dtype=torch.long)
     return ptt
 
+
+
+
+import os
+import numpy as np
+import torch
+
 class DataLoaderLite:
     def __init__(self, B, T, process_rank, num_processes, split):
-        self.B = B
-        self.T = T
+        self.original_B = B
+        self.original_T = T
         self.process_rank = process_rank
         self.num_processes = num_processes
         assert split in {'train', 'val'}
-
         # get the shard filenames
         data_root = "edu_fineweb10B"
-        shards = os.listdir(data_root)
-        shards = [s for s in shards if split in s]
+        shards = [f for f in os.listdir(data_root) if f.endswith('.npy') and split in f]
         shards = sorted(shards)
-        shards = [os.path.join(data_root, s) for s in shards]
-        self.shards = shards
-        assert len(shards) > 0, f"no shards found for split {split}"
-        if master_process:
-            print(f"found {len(shards)} shards for split {split}")
+        self.shards = [os.path.join(data_root, s) for s in shards]
+        assert len(self.shards) > 0, f"no shards found for split {split}"
+        print(f"found {len(self.shards)} shards for split {split}")
         self.reset()
 
     def reset(self):
-        # state, init at shard zero
         self.current_shard = 0
-        self.tokens = load_tokens(self.shards[self.current_shard])
+        self.tokens = self.load_tokens(self.shards[self.current_shard])
+        print(f"prev B: {self.original_B} - prev T: {self.original_T}")
+        self.B, self.T = self.calculate_B_and_T(len(self.tokens))
         self.current_position = self.B * self.T * self.process_rank
+        print(f"Adjusted batch size (B) to {self.B} and sequence length (T) to {self.T}")
+
+    def calculate_B_and_T(self, data_size):
+        total = data_size - 1  # Subtract 1 to account for the target shifting
+        T = self.original_T
+        B = total // T
+        
+        while B < 1 and T > 1:
+            T = T // 2
+            B = total // T
+        
+        B = max(1, B)
+        return B, T
+
+    def load_tokens(self, filename):
+        np_array = np.load(filename)
+        # Convert uint16 to int64 (long)
+        return torch.from_numpy(np_array.astype(np.int64))
 
     def next_batch(self):
         B, T = self.B, self.T
-        buf = self.tokens[self.current_position : self.current_position+B*T+1]
-        x = (buf[:-1]).view(B, T) # inputs
-        y = (buf[1:]).view(B, T) # targets
-        # advance the position in the tensor
+        buf = self.tokens[self.current_position : self.current_position + B*T + 1]
+        
+        if len(buf) < B*T + 1:
+            self.current_shard = (self.current_shard + 1) % len(self.shards)
+            self.tokens = self.load_tokens(self.shards[self.current_shard])
+            self.B, self.T = self.calculate_B_and_T(len(self.tokens))
+            self.current_position = 0
+            return self.next_batch()
+        
+        x = buf[:-1].view(B, T)
+        y = buf[1:].view(B, T)
+        
         self.current_position += B * T * self.num_processes
-        # if loading the next batch would be out of bounds, advance to next shard
         if self.current_position + (B * T * self.num_processes + 1) > len(self.tokens):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
-            self.tokens = load_tokens(self.shards[self.current_shard])
-            self.current_position = B * T * self.process_rank
+            self.tokens = self.load_tokens(self.shards[self.current_shard])
+            self.B, self.T = self.calculate_B_and_T(len(self.tokens))
+            self.current_position = self.B * self.T * self.process_rank
+        
         return x, y
+
 
 # -----------------------------------------------------------------------------
 # helper function for HellaSwag eval
@@ -378,7 +410,7 @@ for step in range(max_steps):
     last_step = (step == max_steps - 1)
 
     # once in a while evaluate our validation loss
-    if step % 250 == 0 or last_step:
+    if step % 1 == 0 or last_step:
         model.eval()
         val_loader.reset()
         with torch.no_grad():
