@@ -1,3 +1,11 @@
+## set this up
+## run from a notebook
+# !bash -c "mkdir -p ~/.ssh && ssh-keyscan -H dewijones92vultr.duckdns.org >> ~/.ssh/known_hosts; cat ~/.ssh/known_hosts; rsync --version; sshpass -p 'testpass' rsync -avvvz --exclude=".*" --include="*.goodlog"  wb1_user@dewijones92vultr.duckdns.org:/home/wb1_user/code/build-nanogpt/ ./ ; ls"
+
+
+
+
+
 # build nanoGPT
 
 This repo holds the from-scratch reproduction of [nanoGPT](https://github.com/karpathy/nanoGPT/tree/master). The git commits were specifically kept step by step and clean so that one can easily walk through the git commit history to see it built slowly. Additionally, there is an accompanying [video lecture on YouTube](https://youtu.be/l8pRSuU81PU) where you can see me introduce each commit and explain the pieces along the way.
