@@ -1,6 +1,6 @@
 ## set this up
 ## run from a notebook
-# !bash -c "mkdir -p ~/.ssh && ssh-keyscan -H dewijones92vultr.duckdns.org >> ~/.ssh/known_hosts; cat ~/.ssh/known_hosts; rsync --version; sshpass -p 'testpass' rsync -avvvz --exclude=".*" --include="*.goodlog"  wb1_user@dewijones92vultr.duckdns.org:/home/wb1_user/code/build-nanogpt/ ./ ; ls"
+# !bash sync.sh
 
 
 
