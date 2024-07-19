@@ -7,7 +7,7 @@
 # run on kaggle
 
 
-# !set -xe; apt -y install sshpass; export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' rsync -avvvz --checksum --exclude='.*' --include='**.goodlog' -e "ssh -o StrictHostKeyChecking=no" wb1_user@dewijones92vultr.duckdns.org:/home/wb1_user/code/build-nanogpt/ . ;bash runcomputation.sh
+# !set -xe;  pip install tiktoken; apt -y install sshpass; mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts ;export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' rsync -avvvz --checksum --exclude='.*' --include='**.goodlog' -e "ssh -o StrictHostKeyChecking=no" wb1_user@dewijones92vultr.duckdns.org:/home/wb1_user/code/build-nanogpt/ . ;bash runcomputation.sh
 
 
 
