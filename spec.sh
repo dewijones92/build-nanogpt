@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Function to load GPUs
 load_gpus() {
@@ -34,14 +34,28 @@ load_tpus() {
     fi
 }
 
-# Function to list CPUs
-list_cpus() {
-    echo "Listing CPUs..."
+# Function to list detailed CPU information
+list_cpu_details() {
+    echo "Listing detailed CPU information..."
     if [ -f /proc/cpuinfo ]; then
-        cpu_count=$(grep -c processor /proc/cpuinfo)
+        physical_cpus=$(lscpu | grep "Socket(s):" | awk '{print $2}')
+        cores_per_cpu=$(lscpu | grep "Core(s) per socket:" | awk '{print $4}')
+        total_cores=$((physical_cpus * cores_per_cpu))
+        threads_per_core=$(lscpu | grep "Thread(s) per core:" | awk '{print $4}')
+        total_threads=$((total_cores * threads_per_core))
         cpu_model=$(grep "model name" /proc/cpuinfo | uniq | cut -d ':' -f 2 | sed 's/^[ \t]*//')
-        echo "Number of CPU cores: $cpu_count"
+
         echo "CPU Model: $cpu_model"
+        echo "Number of Physical CPUs: $physical_cpus"
+        echo "Cores per CPU: $cores_per_cpu"
+        echo "Total CPU Cores: $total_cores"
+        echo "Threads per Core: $threads_per_core"
+        echo "Total CPU Threads: $total_threads"
+
+        echo -e "\nDetailed Core/Thread Information:"
+        awk '/^processor|^core id|^physical id/' /proc/cpuinfo | \
+        paste - - - | \
+        awk '{printf "Processor: %s, Physical ID: %s, Core ID: %s\n", $3, $9, $15}'
     else
         echo "Unable to retrieve CPU information."
     fi
@@ -52,7 +66,11 @@ list_ram() {
     echo "Listing RAM..."
     if command -v free &> /dev/null; then
         total_ram=$(free -h | awk '/^Mem:/ {print $2}')
+        used_ram=$(free -h | awk '/^Mem:/ {print $3}')
+        free_ram=$(free -h | awk '/^Mem:/ {print $4}')
         echo "Total RAM: $total_ram"
+        echo "Used RAM: $used_ram"
+        echo "Free RAM: $free_ram"
     else
         echo "Unable to retrieve RAM information. 'free' command not found."
     fi
@@ -62,6 +80,6 @@ list_ram() {
 echo "Starting hardware information script"
 load_gpus
 load_tpus
-list_cpus
+list_cpu_details
 list_ram
 echo "Script execution complete"
