@@ -27,6 +27,8 @@ download_data_sources() {
         # Download the file
         wget -P train_data/ "$line"
     done < data-source-list-books
+     rm -rf edu_fineweb10B/*
+    python fineweb.py  --source 2
 }
 
 export -f download_data_sources
