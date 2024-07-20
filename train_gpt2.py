@@ -9,6 +9,40 @@ from torch.nn import functional as F
 from hellaswag import render_example, iterate_examples
 # -----------------------------------------------------------------------------
 
+
+def get_best_float_config():
+    if torch.cuda.is_available():
+        # Check for CUDA GPUs
+        device = torch.device("cuda")
+        if torch.cuda.get_device_capability(0)[0] >= 8:
+            # Ampere or newer architecture supports efficient bfloat16
+            return torch.bfloat16
+        elif torch.cuda.is_bf16_supported():
+            # Older GPUs might support bfloat16 but less efficiently
+            return torch.bfloat16
+        else:
+            # Fall back to float16 for older GPUs
+            return torch.float16
+    elif hasattr(torch, 'xla') and torch.xla.is_available():
+        # TPU support
+        import torch_xla.core.xla_model as xm
+        if xm.xla_device().type == 'TPU':
+            return torch.bfloat16  # TPUs are optimized for bfloat16
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        # Apple Silicon (M1/M2) GPUs
+        return torch.float16  # bfloat16 not fully supported on MPS as of now
+    elif torch.backends.mkldnn.is_available():
+        # Intel CPUs with MKL-DNN (now OneDNN) support
+        return torch.bfloat16
+    else:
+        # Default to float32 for other cases
+        return torch.float32
+
+# Example usage
+best_dtype = get_best_float_config()
+print(f"The recommended dtype for your hardware is: {best_dtype}")
+
+
 class CausalSelfAttention(nn.Module):
 
     def __init__(self, config):
@@ -419,7 +453,7 @@ for step in range(max_steps):
             for _ in range(val_loss_steps):
                 x, y = val_loader.next_batch()
                 x, y = x.to(device), y.to(device)
-                with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                with torch.autocast(device_type=device_type, dtype=best_dtype):
                     logits, loss = model(x, y)
                 loss = loss / val_loss_steps
                 val_loss_accum += loss.detach()
@@ -456,7 +490,7 @@ for step in range(max_steps):
             mask = mask.to(device)
             # get the logits
             with torch.no_grad():
-                with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                with torch.autocast(device_type=device_type, dtype=best_dtype):
                     logits, loss = model(tokens)
                 pred_norm = get_most_likely_row(tokens, mask, logits)
             num_total += 1
@@ -489,7 +523,7 @@ for step in range(max_steps):
         while xgen.size(1) < max_length:
             # forward the model to get the logits
             with torch.no_grad():
-                with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                with torch.autocast(device_type=device_type, dtype=best_dtype):
                     logits, loss = model(xgen) # (B, T, vocab_size)
                 # take the logits at the last position
                 logits = logits[:, -1, :] # (B, vocab_size)
@@ -521,7 +555,7 @@ for step in range(max_steps):
         # added after video, this field is also used by the forward pass.
         if ddp:
             model.require_backward_grad_sync = (micro_step == grad_accum_steps - 1)
-        with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type, dtype=best_dtype):
             logits, loss = model(x, y)
         # we have to scale the loss to account for gradient accumulation,
         # because the gradients just add on each successive backward().
