@@ -39,6 +39,7 @@ from transformers import GPT2LMHeadModel
 DATA_CACHE_DIR = os.path.join(os.path.dirname(__file__), "hellaswag")
 
 def download_file(url: str, fname: str, chunk_size=1024):
+    print("dewi hellaswag: download_file")
     """Helper function to download a file from a given url"""
     resp = requests.get(url, stream=True)
     total = int(resp.headers.get("content-length", 0))
@@ -119,7 +120,7 @@ def iterate_examples(split):
 
 @torch.no_grad()
 def evaluate(model_type, device):
-
+    print("dewi hellaswag: evaluate")
     torch.set_float32_matmul_precision('high') # use tf32
     model = GPT2LMHeadModel.from_pretrained(model_type)
     model.to(device)
