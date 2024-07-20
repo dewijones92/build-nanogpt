@@ -13,7 +13,16 @@ run_unbuffered() {
         "bash -c 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -c \"stdbuf -i0 -o0 -e0 cat >> /home/wb1_user/code/build-nanogpt/run_logs/$LOGFILE\"'")
 }
 
+# Function to download files
+download_files() {
+    rm -rf train_data/*
+    while IFS= read -r url; do
+        wget -P train_data/ "$url"
+    done < data-source-list-books
+}
+
 # Run the commands
+run_unbuffered "download_files"
 run_unbuffered "bash spec.sh"
 run_unbuffered "python train_gpt2.py"
 
