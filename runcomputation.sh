@@ -9,7 +9,7 @@ run_unbuffered() {
     ub $cmd |& \
     ub ts |& \
     ub tee >(ub cat) >(ub sshpass -p testpass ub ssh -t wb1_user@dewijones92vultr.duckdns.org \
-        "ub bash -c 'cat >> /home/wb1_user/code/build-nanogpt/run_logs/$LOGFILE'")
+        "bash -c 'cat >> /home/wb1_user/code/build-nanogpt/run_logs/$LOGFILE'")
 }
 
 # Run the commands
