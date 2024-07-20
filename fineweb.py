@@ -36,6 +36,9 @@ def tokenize(doc):
 def write_datafile(filename, tokens_np):
     np.save(filename, tokens_np)
 
+
+
+
 def process_data(source):
     if source == 1:
         # Download the dataset
@@ -47,8 +50,14 @@ def process_data(source):
         files = glob.glob("train_data/*")
         all_lines = []
         for file in files:
-            with open(file, "r") as f:
-                all_lines.extend(f.readlines())
+            try:
+                with open(file, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                    all_lines.extend(lines)
+            except Exception as e:
+                print(f"Warning: Error reading file {file}: {str(e)}")
+                print("Skipping this file and continuing with the next one.")
+                continue
         
         # Set random seed for reproducibility
         random.seed(RANDOM_SEED)
@@ -72,6 +81,8 @@ def process_data(source):
         process_and_write_shards(val_docs, split="val")
     else:
         raise ValueError("Invalid source specified")
+
+
 
 def process_and_write_shards(data_iterator, split=None):
     nprocs = max(1, os.cpu_count()//2)
