@@ -423,12 +423,17 @@ except ValueError as e:
     print(f"Error: {e}")
 
 
-
+# Use key-based access to get values from the dictionary
+micro_batch_size = params["micro_batch_size"]
+sequence_length = params["sequence_length"]
+gradient_accumulation_steps = params["gradient_accumulation_steps"]
+actual_batch_size = params["actual_batch_size"]
 
 
 total_batch_size = 524288 # 2**19, ~0.5M, in number of tokens
-B = params.micro_batch_size # micro batch size
-T = params.sequence_length # sequence length
+B = micro_batch_size # micro batch size
+T = sequence_length # sequence length
+
 assert total_batch_size % (B * T * ddp_world_size) == 0, "make sure total_batch_size is divisible by B * T * ddp_world_size"
 grad_accum_steps = total_batch_size // (B * T * ddp_world_size)
 if master_process:
