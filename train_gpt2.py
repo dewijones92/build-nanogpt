@@ -359,7 +359,7 @@ enc = tiktoken.get_encoding("gpt2")
 import torch
 import math
 
-def optimize_training_params(model, total_desired_batch_size, min_micro_batch_size=1, min_seq_length=64, max_seq_length=2048):
+def optimize_training_params(model, min_micro_batch_size=1, min_seq_length=64, max_seq_length=2048):
     def get_gpu_memory():
         if torch.cuda.is_available():
             return torch.cuda.get_device_properties(0).total_memory, torch.cuda.memory_allocated(0)
@@ -385,7 +385,7 @@ def optimize_training_params(model, total_desired_batch_size, min_micro_batch_si
 
     best_micro_batch_size = min_micro_batch_size
     best_seq_length = min_seq_length
-    min_grad_acc_steps = 1
+    best_grad_acc_steps = 1
 
     for seq_length in range(min_seq_length, max_seq_length + 1, 64):
         sample_memory = estimate_sample_memory(seq_length)
@@ -394,16 +394,18 @@ def optimize_training_params(model, total_desired_batch_size, min_micro_batch_si
         if max_batch_size < min_micro_batch_size:
             break
 
-        grad_acc_steps = math.ceil(total_desired_batch_size / (max_batch_size * seq_length))
-        if grad_acc_steps < min_grad_acc_steps:
-            continue
+        # We'll use gradient accumulation steps to increase effective batch size
+        grad_acc_steps = max(1, min(32, math.ceil(1024 / max_batch_size)))  # Limit to max 32 grad acc steps
 
-        best_micro_batch_size = max_batch_size
-        best_seq_length = seq_length
-        best_grad_acc_steps = grad_acc_steps
+        current_micro_batch_size = min(max_batch_size, 1024 // grad_acc_steps)
+
+        if current_micro_batch_size > best_micro_batch_size or (current_micro_batch_size == best_micro_batch_size and seq_length > best_seq_length):
+            best_micro_batch_size = current_micro_batch_size
+            best_seq_length = seq_length
+            best_grad_acc_steps = grad_acc_steps
 
     if best_micro_batch_size == min_micro_batch_size and best_seq_length == min_seq_length:
-        raise ValueError("Could not find suitable parameters. Consider reducing total_desired_batch_size.")
+        raise ValueError("Could not find suitable parameters. Consider reducing min_micro_batch_size or min_seq_length.")
 
     actual_batch_size = best_micro_batch_size * best_seq_length * best_grad_acc_steps
 
@@ -414,41 +416,31 @@ def optimize_training_params(model, total_desired_batch_size, min_micro_batch_si
         "actual_batch_size": actual_batch_size
     }
 
+
 model = GPT(GPTConfig(vocab_size=50304))
-total_desired_batch_size = 524288
 try:
-    params = optimize_training_params(model, total_desired_batch_size)
+    params = optimize_training_params(model)
     print(f"Optimized parameters: {params}")
 except ValueError as e:
     print(f"Error: {e}")
 
-# Use key-based access to get values from the dictionary
-micro_batch_size = params["micro_batch_size"]
-sequence_length = params["sequence_length"]
-gradient_accumulation_steps = params["gradient_accumulation_steps"]
+# Use the optimized parameters
+B = params["micro_batch_size"]
+T = params["sequence_length"]
+grad_accum_steps = params["gradient_accumulation_steps"]
 actual_batch_size = params["actual_batch_size"]
 
-# Log the retrieved values
-print(f"micro_batch_size: {micro_batch_size}")
-print(f"sequence_length: {sequence_length}")
-print(f"gradient_accumulation_steps: {gradient_accumulation_steps}")
-print(f"actual_batch_size: {actual_batch_size}")
+print(f"Micro batch size: {B}")
+print(f"Sequence length: {T}")
+print(f"Gradient accumulation steps: {grad_accum_steps}")
+print(f"Actual batch size: {actual_batch_size}")
 
-total_batch_size = 524288 # 2**19, ~0.5M, in number of tokens
-B = micro_batch_size # micro batch size
-T = sequence_length # sequence length
 
-# Log the values used for calculation
-print(f"total_batch_size: {total_batch_size}")
-print(f"B (micro_batch_size): {B}")
-print(f"T (sequence_length): {T}")
-print(f"ddp_world_size: {ddp_world_size}")
-
-assert total_batch_size % (B * T * ddp_world_size) == 0, "make sure total_batch_size is divisible by B * T * ddp_world_size"
-grad_accum_steps = total_batch_size // (B * T * ddp_world_size)
 
 # Log the calculated gradient accumulation steps
 print(f"grad_accum_steps: {grad_accum_steps}")
+
+assert actual_batch_size == B * T * grad_accum_steps * ddp_world_size, "Inconsistency in batch size calculation"
 
 if master_process:
     print(f"total desired batch size: {total_batch_size}")
