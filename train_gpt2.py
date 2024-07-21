@@ -245,6 +245,7 @@ def load_tokens(filename):
     ptt = torch.tensor(npt, dtype=torch.long)
     return ptt
 
+
 class DataLoaderLite:
     def __init__(self, B, T, process_rank, num_processes, split):
         self.B = B
@@ -273,17 +274,27 @@ class DataLoaderLite:
 
     def next_batch(self):
         B, T = self.B, self.T
-        buf = self.tokens[self.current_position : self.current_position+B*T+1]
-        x = (buf[:-1]).view(B, T) # inputs
-        y = (buf[1:]).view(B, T) # targets
-        # advance the position in the tensor
-        self.current_position += B * T * self.num_processes
-        # if loading the next batch would be out of bounds, advance to next shard
-        if self.current_position + (B * T * self.num_processes + 1) > len(self.tokens):
-            self.current_shard = (self.current_shard + 1) % len(self.shards)
-            self.tokens = load_tokens(self.shards[self.current_shard])
-            self.current_position = B * T * self.process_rank
-        return x, y
+        while True:
+            if self.current_position + B*T+1 > len(self.tokens):
+                # We've reached the end of the current shard
+                self.current_shard = (self.current_shard + 1) % len(self.shards)
+                self.tokens = load_tokens(self.shards[self.current_shard])
+                self.current_position = B * T * self.process_rank
+                continue
+
+            buf = self.tokens[self.current_position : self.current_position+B*T+1]
+            if len(buf) < B*T+1:
+                # Not enough data in this shard, move to next
+                self.current_shard = (self.current_shard + 1) % len(self.shards)
+                self.tokens = load_tokens(self.shards[self.current_shard])
+                self.current_position = B * T * self.process_rank
+                continue
+
+            x = buf[:-1].view(B, T)
+            y = buf[1:].view(B, T)
+            self.current_position += B * T * self.num_processes
+            return x, y
+
 
 # -----------------------------------------------------------------------------
 # helper function for HellaSwag eval
@@ -424,7 +435,7 @@ try:
 except ValueError as e:
     print(f"Error: {e}")
 
-# Use the optimized parameters
+# After getting the optimized parameters
 B = params["micro_batch_size"]
 T = params["sequence_length"]
 grad_accum_steps = params["gradient_accumulation_steps"]
@@ -435,19 +446,16 @@ print(f"Sequence length: {T}")
 print(f"Gradient accumulation steps: {grad_accum_steps}")
 print(f"Actual batch size: {actual_batch_size}")
 
-
-
-# Log the calculated gradient accumulation steps
-print(f"grad_accum_steps: {grad_accum_steps}")
-
 assert actual_batch_size == B * T * grad_accum_steps * ddp_world_size, "Inconsistency in batch size calculation"
 
 if master_process:
-    print(f"total desired batch size: {actual_batch_size}")
-    print(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
+    print(f"Effective total batch size: {actual_batch_size}")
+    print(f"=> gradient accumulation steps: {grad_accum_steps}")
 
 train_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="train")
 val_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="val")
+
+# ... rest of your training loop ...
 
 torch.set_float32_matmul_precision('high')
 
