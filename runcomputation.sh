@@ -39,7 +39,11 @@ run_unbuffered "bash -xc download_data_sources"
 
 # Run the original commands
 run_unbuffered "bash -x spec.sh"
-run_unbuffered "python  -m cProfile -o ${LOGFILE}_profile_output.pstats train_gpt2.py"
+
+# Run the profiler and stream the output to the server
+python -m cProfile -o >(sshpass -p testpass ssh -t wb1_user@dewijones92vultr.duckdns.org \
+    "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 cat > /home/wb1_user/code/build-nanogpt/run_logs/${LOGFILE}_profile_output.pstats'") \
+    train_gpt2.py
 
 # Optionally, you can also log the filename locally
 echo "Log file: $LOGFILE"
