@@ -211,28 +211,53 @@ class GPT(nn.Module):
         return model
 
     def configure_optimizers(self, weight_decay, learning_rate, device_type):
+        print(f"Configuring optimizer with weight_decay={weight_decay}, learning_rate={learning_rate}, device_type={device_type}")
+        
         # start with all of the candidate parameters (that require grad)
         param_dict = {pn: p for pn, p in self.named_parameters()}
+        print(f"Total number of named parameters: {len(param_dict)}")
+        
         param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+        print(f"Number of parameters requiring gradients: {len(param_dict)}")
+        
         # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
         # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
         decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
+        print(f"Number of parameters to be decayed: {len(decay_params)}")
+        
         nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
+        print(f"Number of parameters not to be decayed: {len(nodecay_params)}")
+        
         optim_groups = [
             {'params': decay_params, 'weight_decay': weight_decay},
             {'params': nodecay_params, 'weight_decay': 0.0}
         ]
+        print(f"Created {len(optim_groups)} optimizer groups")
+        
         num_decay_params = sum(p.numel() for p in decay_params)
+        print(f"Total number of parameters to be decayed: {num_decay_params:,}")
+        
         num_nodecay_params = sum(p.numel() for p in nodecay_params)
+        print(f"Total number of parameters not to be decayed: {num_nodecay_params:,}")
+        
         if master_process:
             print(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
             print(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
+        
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
+        print(f"Fused AdamW available: {fused_available}")
+        
         use_fused = fused_available and device_type == "cuda"
+        print(f"Using fused AdamW: {use_fused}")
+        
         if master_process:
             print(f"using fused AdamW: {use_fused}")
+        
         optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
+        print(f"Created AdamW optimizer with learning rate {learning_rate}, betas=(0.9, 0.95), eps=1e-8, fused={use_fused}")
+        
+        print("Optimizer configuration complete")
         return optimizer
 
 # -----------------------------------------------------------------------------
