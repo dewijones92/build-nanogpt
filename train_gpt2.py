@@ -520,25 +520,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_rate=6e-4, device_type=device_type)
-logger.info(f"Optimizer configured with weight_decay=0.1, learning_rate=6e-4, device_type={device_type}")
+print(f"Optimizer configured with weight_decay=0.1, learning_rate=6e-4, device_type={device_type}")
 
 # create the log directory we will write checkpoints to and log to
 log_dir = "log"
 os.makedirs(log_dir, exist_ok=True)
 log_file = os.path.join(log_dir, f"log.txt")
-logger.info(f"Log directory created: {log_dir}")
+print(f"Log directory created: {log_dir}")
 with open(log_file, "w") as f: # open for writing to clear the file
     pass
-logger.info(f"Log file cleared: {log_file}")
+print(f"Log file cleared: {log_file}")
 
 for step in range(max_steps):
-    logger.info(f"Starting step {step}/{max_steps}")
+    print(f"Starting step {step}/{max_steps}")
     t0 = time.time()
     last_step = (step == max_steps - 1)
 
     # once in a while evaluate our validation loss
     if step % 250 == 0 or last_step:
-        logger.info("Evaluating validation loss")
+        print("Evaluating validation loss")
         model.eval()
         val_loader.reset()
         with torch.no_grad():
@@ -556,11 +556,11 @@ for step in range(max_steps):
             logger.debug("Reducing validation loss across processes")
             dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
         if master_process:
-            logger.info(f"Validation loss: {val_loss_accum.item():.4f}")
+            print(f"Validation loss: {val_loss_accum.item():.4f}")
             with open(log_file, "a") as f:
                 f.write(f"{step} val {val_loss_accum.item():.4f}\n")
             if step > 0 and (step % 5000 == 0 or last_step):
-                logger.info("Saving model checkpoint")
+                print("Saving model checkpoint")
                 checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
                 checkpoint = {
                     'model': raw_model.state_dict(),
@@ -569,11 +569,11 @@ for step in range(max_steps):
                     'val_loss': val_loss_accum.item()
                 }
                 torch.save(checkpoint, checkpoint_path)
-                logger.info(f"Checkpoint saved to {checkpoint_path}")
+                print(f"Checkpoint saved to {checkpoint_path}")
 
     # once in a while evaluate hellaswag
     if (step % 250 == 0 or last_step) and (not use_compile):
-        logger.info("Evaluating HellaSwag")
+        print("Evaluating HellaSwag")
         num_correct_norm = 0
         num_total = 0
         for i, example in enumerate(iterate_examples("val")):
@@ -599,13 +599,13 @@ for step in range(max_steps):
             num_correct_norm = num_correct_norm.item()
         acc_norm = num_correct_norm / num_total
         if master_process:
-            logger.info(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
+            print(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
             with open(log_file, "a") as f:
                 f.write(f"{step} hella {acc_norm:.4f}\n")
 
     # once in a while generate from the model (except step 0, which is noise)
     if ((step > 0 and step % 250 == 0) or last_step) and (not use_compile):
-        logger.info("Generating text from the model")
+        print("Generating text from the model")
         model.eval()
         num_return_sequences = 4
         max_length = 32
@@ -629,10 +629,10 @@ for step in range(max_steps):
         for i in range(num_return_sequences):
             tokens = xgen[i, :max_length].tolist()
             decoded = enc.decode(tokens)
-            logger.info(f"rank {ddp_rank} sample {i}: {decoded}")
+            print(f"rank {ddp_rank} sample {i}: {decoded}")
 
     # do one step of the optimization
-    logger.info("Starting optimization step")
+    print("Starting optimization step")
     model.train()
     optimizer.zero_grad()
     loss_accum = 0.0
@@ -663,7 +663,7 @@ for step in range(max_steps):
     tokens_processed = train_loader.B * train_loader.T * grad_accum_steps * ddp_world_size
     tokens_per_sec = tokens_processed / dt
     if master_process:
-        logger.info(f"step {step:5d} | loss: {loss_accum.item():.6f} | lr {lr:.4e} | norm: {norm:.4f} | dt: {dt*1000:.2f}ms | tok/sec: {tokens_per_sec:.2f}")
+        print(f"step {step:5d} | loss: {loss_accum.item():.6f} | lr {lr:.4e} | norm: {norm:.4f} | dt: {dt*1000:.2f}ms | tok/sec: {tokens_per_sec:.2f}")
         with open(log_file, "a") as f:
             f.write(f"{step} train {loss_accum.item():.6f}\n")
 
