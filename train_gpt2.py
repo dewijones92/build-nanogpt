@@ -443,7 +443,7 @@ print(f"grad_accum_steps: {grad_accum_steps}")
 assert actual_batch_size == B * T * grad_accum_steps * ddp_world_size, "Inconsistency in batch size calculation"
 
 if master_process:
-    print(f"total desired batch size: {total_batch_size}")
+    print(f"total desired batch size: {actual_batch_size}")
     print(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
 
 train_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="train")
