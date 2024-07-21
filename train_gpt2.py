@@ -422,20 +422,34 @@ try:
 except ValueError as e:
     print(f"Error: {e}")
 
-
 # Use key-based access to get values from the dictionary
 micro_batch_size = params["micro_batch_size"]
 sequence_length = params["sequence_length"]
 gradient_accumulation_steps = params["gradient_accumulation_steps"]
 actual_batch_size = params["actual_batch_size"]
 
+# Log the retrieved values
+print(f"micro_batch_size: {micro_batch_size}")
+print(f"sequence_length: {sequence_length}")
+print(f"gradient_accumulation_steps: {gradient_accumulation_steps}")
+print(f"actual_batch_size: {actual_batch_size}")
 
 total_batch_size = 524288 # 2**19, ~0.5M, in number of tokens
 B = micro_batch_size # micro batch size
 T = sequence_length # sequence length
 
+# Log the values used for calculation
+print(f"total_batch_size: {total_batch_size}")
+print(f"B (micro_batch_size): {B}")
+print(f"T (sequence_length): {T}")
+print(f"ddp_world_size: {ddp_world_size}")
+
 assert total_batch_size % (B * T * ddp_world_size) == 0, "make sure total_batch_size is divisible by B * T * ddp_world_size"
 grad_accum_steps = total_batch_size // (B * T * ddp_world_size)
+
+# Log the calculated gradient accumulation steps
+print(f"grad_accum_steps: {grad_accum_steps}")
+
 if master_process:
     print(f"total desired batch size: {total_batch_size}")
     print(f"=> calculated gradient accumulation steps: {grad_accum_steps}")
@@ -444,6 +458,7 @@ train_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp
 val_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="val")
 
 torch.set_float32_matmul_precision('high')
+
 
 # create model
 # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
