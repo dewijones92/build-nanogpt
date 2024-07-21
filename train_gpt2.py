@@ -355,9 +355,80 @@ if torch.cuda.is_available():
 
 enc = tiktoken.get_encoding("gpt2")
 
+
+import torch
+import math
+
+def optimize_training_params(model, total_desired_batch_size, min_micro_batch_size=1, min_seq_length=64, max_seq_length=2048):
+    def get_gpu_memory():
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_properties(0).total_memory, torch.cuda.memory_allocated(0)
+        else:
+            return 0, 0
+
+    def estimate_model_memory():
+        return sum(p.numel() * p.element_size() for p in model.parameters())
+
+    def estimate_sample_memory(seq_length):
+        # This is a rough estimate and may need to be adjusted based on your specific model architecture
+        return seq_length * model.config.n_embd * 4 * 2  # *2 for forward and backward pass
+
+    total_memory, allocated_memory = get_gpu_memory()
+    free_memory = total_memory - allocated_memory
+    model_memory = estimate_model_memory()
+    
+    # Reserve some memory for CUDA kernels and other overhead
+    available_memory = free_memory - model_memory - 1e9  # Reserve 1GB for overhead
+    
+    if available_memory <= 0:
+        raise ValueError("Not enough GPU memory available")
+
+    best_micro_batch_size = min_micro_batch_size
+    best_seq_length = min_seq_length
+    min_grad_acc_steps = 1
+
+    for seq_length in range(min_seq_length, max_seq_length + 1, 64):
+        sample_memory = estimate_sample_memory(seq_length)
+        max_batch_size = available_memory // sample_memory
+
+        if max_batch_size < min_micro_batch_size:
+            break
+
+        grad_acc_steps = math.ceil(total_desired_batch_size / (max_batch_size * seq_length))
+        if grad_acc_steps < min_grad_acc_steps:
+            continue
+
+        best_micro_batch_size = max_batch_size
+        best_seq_length = seq_length
+        best_grad_acc_steps = grad_acc_steps
+
+    if best_micro_batch_size == min_micro_batch_size and best_seq_length == min_seq_length:
+        raise ValueError("Could not find suitable parameters. Consider reducing total_desired_batch_size.")
+
+    actual_batch_size = best_micro_batch_size * best_seq_length * best_grad_acc_steps
+
+    return {
+        "micro_batch_size": best_micro_batch_size,
+        "sequence_length": best_seq_length,
+        "gradient_accumulation_steps": best_grad_acc_steps,
+        "actual_batch_size": actual_batch_size
+    }
+
+model = GPT(GPTConfig(vocab_size=50304))
+total_desired_batch_size = 524288
+try:
+    params = optimize_training_params(model, total_desired_batch_size)
+    print(f"Optimized parameters: {params}")
+except ValueError as e:
+    print(f"Error: {e}")
+
+
+
+
+
 total_batch_size = 524288 # 2**19, ~0.5M, in number of tokens
-B = 64 # micro batch size
-T = 1024 # sequence length
+B = params.micro_batch_size # micro batch size
+T = params.sequence_length # sequence length
 assert total_batch_size % (B * T * ddp_world_size) == 0, "make sure total_batch_size is divisible by B * T * ddp_world_size"
 grad_accum_steps = total_batch_size // (B * T * ddp_world_size)
 if master_process:
@@ -370,7 +441,6 @@ val_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_w
 torch.set_float32_matmul_precision('high')
 
 # create model
-model = GPT(GPTConfig(vocab_size=50304))
 # model = GPT.from_pretrained("gpt2") # or init from OpenAI GPT-2
 model.to(device)
 use_compile = False # torch.compile interferes with HellaSwag eval and Generation. TODO fix
