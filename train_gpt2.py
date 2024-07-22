@@ -464,6 +464,7 @@ try:
     print(f"Optimized parameters: {params}")
 except ValueError as e:
     print(f"Error: {e}")
+    exit;
 
 # After getting the optimized parameters
 B = params["micro_batch_size"]
