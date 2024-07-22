@@ -40,10 +40,11 @@ run_unbuffered "bash -xc download_data_sources"
 # Run the original commands
 run_unbuffered "bash -x spec.sh"
 
-run_unbuffered "pip install line_profiler[all]"
+pip install line_profiler[all]
+pip install line_profiler
 
 # Run the profiler and stream the output to the server
-python LINE_PROFILE=1 train_gpt2.py
+LINE_PROFILE=1 python train_gpt2.py
 
 # Optionally, you can also log the filename locally
 echo "Log file: $LOGFILE"

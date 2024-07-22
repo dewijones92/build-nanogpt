@@ -397,6 +397,8 @@ enc = tiktoken.get_encoding("gpt2")
 
 import torch
 import math
+from line_profiler import profile
+
 
 def optimize_training_params(model, min_micro_batch_size=1, min_seq_length=64, max_seq_length=2048):
     def get_gpu_memory():
