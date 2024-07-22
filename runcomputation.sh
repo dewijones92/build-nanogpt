@@ -1,6 +1,21 @@
-#!/bin/bash
-set -x
+#!/bin/bash -xi
 
+unset HISTFILE
+
+# Configuration variables
+export REMOTE_USER="wb1_user"
+export REMOTE_HOST="dewijones92vultr.duckdns.org"
+export REMOTE_PASSWORD="testpass"
+export REMOTE_LOG_DIR="/home/wb1_user/code/build-nanogpt/run_logs"
+export LOCAL_TRAIN_DATA_DIR="train_data"
+export LOCAL_FINEWEB_DIR="edu_fineweb10B"
+export DATA_SOURCE_LIST="data-source-list-books"
+export FINEWEB_SCRIPT="fineweb.py"
+export SPEC_SCRIPT="spec.sh"
+export TRAIN_SCRIPT="train_gpt2.py"
+export PROFILE_OUTPUT="profile_output.txt"
+
+set -x
 # Generate a consistent filename for logging
 LOGFILE="$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S).goodlog"
 
@@ -10,41 +25,45 @@ run_unbuffered() {
     local cmd="$1"
     ub $cmd |& \
     ub ts |& \
-    ub tee >(ub cat) >(sshpass -p testpass ssh -t wb1_user@dewijones92vultr.duckdns.org \
-        "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> /home/wb1_user/code/build-nanogpt/run_logs/$LOGFILE\"'")
+    ub tee >(ub cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
+        "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
 
 # Function to download data sources
 download_data_sources() {
     # Remove existing data
-    rm -rf train_data/*
-    
+    rm -rf "$LOCAL_TRAIN_DATA_DIR"/*
+   
     # Read each line from data-source-list-books
     while IFS= read -r line
     do
         # Skip lines starting with #
         [[ $line =~ ^#.*$ ]] && continue
-        
+       
         # Download the file
-        wget -P train_data/ "$line"
-    done < data-source-list-books
-     rm -rf edu_fineweb10B/*
-    python fineweb.py  --source 2
+        wget -P "$LOCAL_TRAIN_DATA_DIR"/ "$line"
+    done < "$DATA_SOURCE_LIST"
+    rm -rf "$LOCAL_FINEWEB_DIR"/*
+    python "$FINEWEB_SCRIPT" --source 2
 }
 
-export -f download_data_sources
+# Function to send profile output to server
+send_profile_output() {
+    if [ -f "$PROFILE_OUTPUT" ]; then
+        sshpass -p "$REMOTE_PASSWORD" scp "$PROFILE_OUTPUT" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_LOG_DIR/${LOGFILE}_$PROFILE_OUTPUT"
+    fi
+}
 
+# Set up trap to send profile output on script exit
+trap send_profile_output EXIT HUP INT QUIT TERM
+
+export -f download_data_sources
 # Run the new download function
 run_unbuffered "bash -xc download_data_sources"
-
 # Run the original commands
-run_unbuffered "bash -x spec.sh"
-
-pip install line_profiler[all]
-pip install line_profiler
-
+run_unbuffered "bash -x $SPEC_SCRIPT"
+run_unbuffered "pip install line_profiler[all]"
 # Run the profiler and stream the output to the server
-LINE_PROFILE=1 python train_gpt2.py
-
+export LINE_PROFILE=1; run_unbuffered "python $TRAIN_SCRIPT"
 # Optionally, you can also log the filename locally
 echo "Log file: $LOGFILE"
