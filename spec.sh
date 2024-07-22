@@ -20,6 +20,8 @@ else
     echo "NVIDIA GPU not found or nvidia-smi not installed"
 fi
 
+ls -al /home/jupyter
+
 # TPU Information
 echo -e "\nTPU Information:"
 if [ -d "/sys/class/tpu" ]; then
