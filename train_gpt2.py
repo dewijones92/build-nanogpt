@@ -556,36 +556,57 @@ def optimize():
         if step % 250 == 0 or last_step:
             dprint("Evaluating validation loss")
             model.eval()
+            dprint("Setting model to evaluation mode")
             val_loader.reset()
+            dprint("Resetting validation loader")
+            
             with torch.no_grad():
+                dprint("Starting no_grad context")
                 val_loss_accum = 0.0
                 val_loss_steps = 20
+                dprint(f"Initialized validation loss accumulator: {val_loss_accum}, steps: {val_loss_steps}")
+                
                 for i in range(val_loss_steps):
-                    logger.debug(f"Validation step {i+1}/{val_loss_steps}")
+                    dprint(f"Validation step {i+1}/{val_loss_steps}")
                     x, y = val_loader.next_batch()
+                    dprint("Loaded next validation batch")
                     x, y = x.to(device), y.to(device)
+                    dprint("Moved batch to device")
+                    
                     with torch.autocast(device_type=device_type, dtype=best_dtype):
+                        dprint("Starting autocast context")
                         logits, loss = model(x, y)
+                        dprint("Computed model logits and loss")
+                    
                     loss = loss / val_loss_steps
+                    dprint(f"Normalized loss: {loss.item()}")
                     val_loss_accum += loss.detach()
+                    dprint(f"Accumulated validation loss: {val_loss_accum.item()}")
+            
             if ddp:
-                logger.debug("Reducing validation loss across processes")
+                dprint("Running in DDP mode, reducing validation loss across processes")
                 dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
+            
             if master_process:
                 dprint(f"Validation loss: {val_loss_accum.item():.4f}")
                 with open(log_file, "a") as f:
+                    dprint("Writing validation loss to log file")
                     f.write(f"{step} val {val_loss_accum.item():.4f}\n")
+                
                 if step > 0 and (step % 5000 == 0 or last_step):
                     dprint("Saving model checkpoint")
                     checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
+                    dprint(f"Checkpoint path: {checkpoint_path}")
                     checkpoint = {
                         'model': raw_model.state_dict(),
                         'config': raw_model.config,
                         'step': step,
                         'val_loss': val_loss_accum.item()
                     }
+                    dprint("Checkpoint dictionary created")
                     torch.save(checkpoint, checkpoint_path)
                     dprint(f"Checkpoint saved to {checkpoint_path}")
+
 
         # once in a while evaluate hellaswag
         if (step % 250 == 0 or last_step) and (not use_compile):
