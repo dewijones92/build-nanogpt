@@ -30,7 +30,7 @@ echo "$PYTHON_PATH"
 IP="$(curl -4 icanhazip.com)"
 
 # Generate a consistent filename for logging
-LOGFILE="$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S)_$IP_$(hostname).goodlog"
+LOGFILE=$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S)_${IP}_$(hostname).goodlog
 
 # Function to run a command with unbuffered output and log it
 run_unbuffered() {
