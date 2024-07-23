@@ -287,7 +287,6 @@ class DataLoaderLite:
         self.num_processes = num_processes
         assert split in {'train', 'val'}
 
-        # get the shard filenames
         data_root = "edu_fineweb10B"
         shards = os.listdir(data_root)
         shards = [s for s in shards if split in s]
@@ -295,38 +294,65 @@ class DataLoaderLite:
         shards = [os.path.join(data_root, s) for s in shards]
         self.shards = shards
         assert len(shards) > 0, f"no shards found for split {split}"
+        
         if master_process:
             dprint(f"found {len(shards)} shards for split {split}")
+        
         self.reset()
 
     def reset(self):
-        # state, init at shard zero
+        dprint("Resetting DataLoaderLite")
         self.current_shard = 0
+        dprint(f"Set current_shard to {self.current_shard}")
+        
         self.tokens = load_tokens(self.shards[self.current_shard])
+        dprint(f"Loaded tokens from shard: {self.shards[self.current_shard]}")
+        
         self.current_position = self.B * self.T * self.process_rank
+        dprint(f"Set current_position to {self.current_position}")
 
     def next_batch(self):
         B, T = self.B, self.T
+        dprint(f"Starting next_batch with B={B}, T={T}, current_position={self.current_position}")
+
         while True:
-            if self.current_position + B*T+1 > len(self.tokens):
-                # We've reached the end of the current shard
+            if self.current_position + B * T + 1 > len(self.tokens):
+                dprint("Current position exceeds token length, loading next shard")
+                
                 self.current_shard = (self.current_shard + 1) % len(self.shards)
+                dprint(f"Set current_shard to {self.current_shard}")
+                
                 self.tokens = load_tokens(self.shards[self.current_shard])
+                dprint(f"Loaded tokens from shard: {self.shards[self.current_shard]}")
+                
                 self.current_position = B * T * self.process_rank
+                dprint(f"Reset current_position to {self.current_position}")
                 continue
 
-            buf = self.tokens[self.current_position : self.current_position+B*T+1]
-            if len(buf) < B*T+1:
-                # Not enough data in this shard, move to next
+            buf = self.tokens[self.current_position : self.current_position + B * T + 1]
+            dprint(f"Buffer extracted from current_position: {self.current_position}, buffer length: {len(buf)}")
+
+            if len(buf) < B * T + 1:
+                dprint("Buffer length insufficient, moving to next shard")
+                
                 self.current_shard = (self.current_shard + 1) % len(self.shards)
+                dprint(f"Set current_shard to {self.current_shard}")
+                
                 self.tokens = load_tokens(self.shards[self.current_shard])
+                dprint(f"Loaded tokens from shard: {self.shards[self.current_shard]}")
+                
                 self.current_position = B * T * self.process_rank
+                dprint(f"Reset current_position to {self.current_position}")
                 continue
 
             x = buf[:-1].view(B, T)
             y = buf[1:].view(B, T)
+            dprint(f"Prepared batch: x shape {x.shape}, y shape {y.shape}")
+            
             self.current_position += B * T * self.num_processes
+            dprint(f"Updated current_position to {self.current_position}")
             return x, y
+
 
 
 # -----------------------------------------------------------------------------
