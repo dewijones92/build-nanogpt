@@ -67,10 +67,7 @@ trap send_profile_output EXIT HUP INT QUIT TERM
 
 run_unbuffered 'echo $PYTHON_PATH'
 run_unbuffered "pip show pip"
-run_unbuffered "$PYTHON_PATH -m site --user-site"
 
-
-exit;
 
 export -f download_data_sources
 # Run the new download function
@@ -83,6 +80,6 @@ run_unbuffered "pip install line_profiler"
 
 
 # Run the profiler and stream the output to the server
-export LINE_PROFILE=1; run_unbuffered "python $TRAIN_SCRIPT"
+export LINE_PROFILE=1; run_unbuffered "$PYTHON_PATH $TRAIN_SCRIPT"
 # Optionally, you can also log the filename locally
 echo "Log file: $LOGFILE"
