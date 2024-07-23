@@ -267,6 +267,7 @@ class GPT(nn.Module):
 import tiktoken
 import numpy as np
 
+@profile
 def load_tokens(filename):
     npt = np.load(filename)
     npt = npt.astype(np.int32) # added after video
@@ -328,6 +329,7 @@ class DataLoaderLite:
 # helper function for HellaSwag eval
 # takes tokens, mask, and logits, returns the index of the completion with the lowest loss
 
+@profile
 def get_most_likely_row(tokens, mask, logits):
     # evaluate the autoregressive loss at all positions
     shift_logits = (logits[..., :-1, :]).contiguous()
@@ -399,7 +401,7 @@ import torch
 import math
 from line_profiler import profile
 
-
+@profile
 def optimize_training_params(model, min_micro_batch_size=1, min_seq_length=64, max_seq_length=2048):
     def get_gpu_memory():
         if torch.cuda.is_available():
@@ -505,6 +507,8 @@ max_lr = 6e-4
 min_lr = max_lr * 0.1
 warmup_steps = 715
 max_steps = 19073 # 19,073 steps is ~1 epoch, if data is 10B tokens and batch size 0.5M tokens
+
+@profile
 def get_lr(it):
     # 1) linear warmup for warmup_iters steps
     if it < warmup_steps:
