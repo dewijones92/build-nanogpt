@@ -12,6 +12,10 @@ from time import sleep
 
 # -----------------------------------------------------------------------------
 
+def dprint(input):
+    print(input, flush=True)
+
+
 @profile
 def get_best_float_config():
     if torch.cuda.is_available():
@@ -43,7 +47,7 @@ def get_best_float_config():
 
 # Example usage
 best_dtype = get_best_float_config()
-print(f"The recommended dtype for your hardware is: {best_dtype}")
+dprint("The recommended dtype for your hardware is: {best_dtype}")
 
 
 class CausalSelfAttention(nn.Module):
@@ -169,7 +173,7 @@ class GPT(nn.Module):
         """Loads pretrained GPT-2 model weights from huggingface"""
         assert model_type in {'gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'}
         from transformers import GPT2LMHeadModel
-        print("loading weights from pretrained gpt: %s" % model_type)
+        dprint("loading weights from pretrained gpt: %s" % model_type)
 
         # n_layer, n_head and n_embd are determined from model_type
         config_args = {
@@ -214,53 +218,53 @@ class GPT(nn.Module):
         return model
 
     def configure_optimizers(self, weight_decay, learning_rate, device_type):
-        print(f"Configuring optimizer with weight_decay={weight_decay}, learning_rate={learning_rate}, device_type={device_type}")
+        dprint(f"Configuring optimizer with weight_decay={weight_decay}, learning_rate={learning_rate}, device_type={device_type}")
         
         # start with all of the candidate parameters (that require grad)
         param_dict = {pn: p for pn, p in self.named_parameters()}
-        print(f"Total number of named parameters: {len(param_dict)}")
+        dprint(f"Total number of named parameters: {len(param_dict)}")
         
         param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
-        print(f"Number of parameters requiring gradients: {len(param_dict)}")
+        dprint(f"Number of parameters requiring gradients: {len(param_dict)}")
         
         # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
         # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
         decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
-        print(f"Number of parameters to be decayed: {len(decay_params)}")
+        dprint(f"Number of parameters to be decayed: {len(decay_params)}")
         
         nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
-        print(f"Number of parameters not to be decayed: {len(nodecay_params)}")
+        dprint(f"Number of parameters not to be decayed: {len(nodecay_params)}")
         
         optim_groups = [
             {'params': decay_params, 'weight_decay': weight_decay},
             {'params': nodecay_params, 'weight_decay': 0.0}
         ]
-        print(f"Created {len(optim_groups)} optimizer groups")
+        dprint(f"Created {len(optim_groups)} optimizer groups")
         
         num_decay_params = sum(p.numel() for p in decay_params)
-        print(f"Total number of parameters to be decayed: {num_decay_params:,}")
+        dprint(f"Total number of parameters to be decayed: {num_decay_params:,}")
         
         num_nodecay_params = sum(p.numel() for p in nodecay_params)
-        print(f"Total number of parameters not to be decayed: {num_nodecay_params:,}")
+        dprint(f"Total number of parameters not to be decayed: {num_nodecay_params:,}")
         
         if master_process:
-            print(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
-            print(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
+            dprint(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
+            dprint(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
         
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
-        print(f"Fused AdamW available: {fused_available}")
+        dprint(f"Fused AdamW available: {fused_available}")
         
         use_fused = fused_available and device_type == "cuda"
-        print(f"Using fused AdamW: {use_fused}")
+        dprint(f"Using fused AdamW: {use_fused}")
         
         if master_process:
-            print(f"using fused AdamW: {use_fused}")
+            dprint(f"using fused AdamW: {use_fused}")
         
         optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
-        print(f"Created AdamW optimizer with learning rate {learning_rate}, betas=(0.9, 0.95), eps=1e-8, fused={use_fused}")
+        dprint(f"Created AdamW optimizer with learning rate {learning_rate}, betas=(0.9, 0.95), eps=1e-8, fused={use_fused}")
         
-        print("Optimizer configuration complete")
+        dprint("Optimizer configuration complete")
         return optimizer
 
 # -----------------------------------------------------------------------------
@@ -292,7 +296,7 @@ class DataLoaderLite:
         self.shards = shards
         assert len(shards) > 0, f"no shards found for split {split}"
         if master_process:
-            print(f"found {len(shards)} shards for split {split}")
+            dprint(f"found {len(shards)} shards for split {split}")
         self.reset()
 
     def reset(self):
@@ -385,7 +389,7 @@ else:
         device = "cuda"
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         device = "mps"
-    print(f"using device: {device}")
+    dprint(f"using device: {device}")
 
 # added after video, pytorch can be serious about it's device vs. device_type distinction
 device_type = "cuda" if device.startswith("cuda") else "cpu"
@@ -463,9 +467,9 @@ def optimize_training_params(model, min_micro_batch_size=1, min_seq_length=64, m
 model = GPT(GPTConfig(vocab_size=50304))
 try:
     params = optimize_training_params(model)
-    print(f"Optimized parameters: {params}")
+    dprint(f"Optimized parameters: {params}")
 except ValueError as e:
-    print(f"Error: {e}")
+    dprint(f"Error: {e}")
     exit;
 
 # After getting the optimized parameters
@@ -474,16 +478,16 @@ T = params["sequence_length"]
 grad_accum_steps = params["gradient_accumulation_steps"]
 actual_batch_size = params["actual_batch_size"]
 
-print(f"Micro batch size: {B}")
-print(f"Sequence length: {T}")
-print(f"Gradient accumulation steps: {grad_accum_steps}")
-print(f"Actual batch size: {actual_batch_size}")
+dprint(f"Micro batch size: {B}")
+dprint(f"Sequence length: {T}")
+dprint(f"Gradient accumulation steps: {grad_accum_steps}")
+dprint(f"Actual batch size: {actual_batch_size}")
 
 assert actual_batch_size == B * T * grad_accum_steps * ddp_world_size, "Inconsistency in batch size calculation"
 
 if master_process:
-    print(f"Effective total batch size: {actual_batch_size}")
-    print(f"=> gradient accumulation steps: {grad_accum_steps}")
+    dprint(f"Effective total batch size: {actual_batch_size}")
+    dprint(f"=> gradient accumulation steps: {grad_accum_steps}")
 
 train_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="train")
 val_loader = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp_world_size, split="val")
@@ -532,25 +536,25 @@ def optimize():
     logger = logging.getLogger(__name__)
 
     optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_rate=6e-4, device_type=device_type)
-    print(f"Optimizer configured with weight_decay=0.1, learning_rate=6e-4, device_type={device_type}")
+    dprint(f"Optimizer configured with weight_decay=0.1, learning_rate=6e-4, device_type={device_type}")
 
     # create the log directory we will write checkpoints to and log to
     log_dir = "log"
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"log.txt")
-    print(f"Log directory created: {log_dir}")
+    dprint(f"Log directory created: {log_dir}")
     with open(log_file, "w") as f: # open for writing to clear the file
         pass
-    print(f"Log file cleared: {log_file}")
+    dprint(f"Log file cleared: {log_file}")
 
     for step in range(max_steps):
-        print(f"Starting step {step}/{max_steps}")
+        dprint(f"Starting step {step}/{max_steps}")
         t0 = time.time()
         last_step = (step == max_steps - 1)
 
         # once in a while evaluate our validation loss
         if step % 250 == 0 or last_step:
-            print("Evaluating validation loss")
+            dprint("Evaluating validation loss")
             model.eval()
             val_loader.reset()
             with torch.no_grad():
@@ -568,11 +572,11 @@ def optimize():
                 logger.debug("Reducing validation loss across processes")
                 dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
             if master_process:
-                print(f"Validation loss: {val_loss_accum.item():.4f}")
+                dprint(f"Validation loss: {val_loss_accum.item():.4f}")
                 with open(log_file, "a") as f:
                     f.write(f"{step} val {val_loss_accum.item():.4f}\n")
                 if step > 0 and (step % 5000 == 0 or last_step):
-                    print("Saving model checkpoint")
+                    dprint("Saving model checkpoint")
                     checkpoint_path = os.path.join(log_dir, f"model_{step:05d}.pt")
                     checkpoint = {
                         'model': raw_model.state_dict(),
@@ -581,11 +585,11 @@ def optimize():
                         'val_loss': val_loss_accum.item()
                     }
                     torch.save(checkpoint, checkpoint_path)
-                    print(f"Checkpoint saved to {checkpoint_path}")
+                    dprint(f"Checkpoint saved to {checkpoint_path}")
 
         # once in a while evaluate hellaswag
         if (step % 250 == 0 or last_step) and (not use_compile):
-            print("Evaluating HellaSwag")
+            dprint("Evaluating HellaSwag")
             num_correct_norm = 0
             num_total = 0
             for i, example in enumerate(iterate_examples("val")):
@@ -611,13 +615,13 @@ def optimize():
                 num_correct_norm = num_correct_norm.item()
             acc_norm = num_correct_norm / num_total
             if master_process:
-                print(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
+                dprint(f"HellaSwag accuracy: {num_correct_norm}/{num_total}={acc_norm:.4f}")
                 with open(log_file, "a") as f:
                     f.write(f"{step} hella {acc_norm:.4f}\n")
 
         # once in a while generate from the model (except step 0, which is noise)
         if ((step > 0 and step % 250 == 0) or last_step) and (not use_compile):
-            print("Generating text from the model")
+            dprint("Generating text from the model")
             model.eval()
             num_return_sequences = 4
             max_length = 32
@@ -641,10 +645,10 @@ def optimize():
             for i in range(num_return_sequences):
                 tokens = xgen[i, :max_length].tolist()
                 decoded = enc.decode(tokens)
-                print(f"rank {ddp_rank} sample {i}: {decoded}")
+                dprint(f"rank {ddp_rank} sample {i}: {decoded}")
 
         # do one step of the optimization
-        print("Starting optimization step")
+        dprint("Starting optimization step")
         model.train()
         optimizer.zero_grad()
         loss_accum = 0.0
@@ -675,7 +679,7 @@ def optimize():
         tokens_processed = train_loader.B * train_loader.T * grad_accum_steps * ddp_world_size
         tokens_per_sec = tokens_processed / dt
         if master_process:
-            print(f"step {step:5d} | loss: {loss_accum.item():.6f} | lr {lr:.4e} | norm: {norm:.4f} | dt: {dt*1000:.2f}ms | tok/sec: {tokens_per_sec:.2f}")
+            dprint(f"step {step:5d} | loss: {loss_accum.item():.6f} | lr {lr:.4e} | norm: {norm:.4f} | dt: {dt*1000:.2f}ms | tok/sec: {tokens_per_sec:.2f}")
             with open(log_file, "a") as f:
                 f.write(f"{step} train {loss_accum.item():.6f}\n")
     if ddp:
