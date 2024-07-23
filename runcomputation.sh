@@ -17,6 +17,7 @@ export PROFILE_OUTPUT="profile_output.txt"
 set -x
 
 PYTHON_PATH=$(type -a python | awk '/aliased/ {print $NF}' | tr -d "'")
+PYTHON_PATH=${PYTHON_PATH#\`}  # Remove leading backtick if present
 
 if [ -z "$PYTHON_PATH" ]; then
     echo "python empty"
