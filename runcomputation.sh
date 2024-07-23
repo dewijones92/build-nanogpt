@@ -16,14 +16,25 @@ export TRAIN_SCRIPT="train_gpt2.py"
 export PROFILE_OUTPUT="profile_output.txt"
 set -x
 
-PYTHON_PATH=$(type -a python | awk '/aliased|\/python/ {print $NF; exit}' | tr -d "'")
-PYTHON_PATH=${PYTHON_PATH#\`}  # Remove leading backtick if present
-if [ -z "$PYTHON_PATH" ]; then
-    echo "python empty"
-    PYTHON_PATH="python"
-fi
+get_command_path() {
+    local cmd=$1
+    local path=$(type -a "$cmd" | awk '/aliased|\/'"$cmd"'/ {print $NF; exit}' | tr -d "'")
+    path=${path#\`}  # Remove leading backtick if present
+    if [ -z "$path" ]; then
+        echo "$cmd empty"
+        path="$cmd"
+    fi
+    echo "$path"
+}
+
+PYTHON_PATH=$(get_command_path python)
+PIP_PATH=$(get_command_path pip)
+
 export PYTHON_PATH
-echo "$PYTHON_PATH"
+export PIP_PATH
+
+echo "Python path: $PYTHON_PATH"
+echo "Pip path: $PIP_PATH"
 
 
 
@@ -76,7 +87,7 @@ send_profile_output() {
 trap send_profile_output EXIT HUP INT QUIT TERM
 
 run_unbuffered 'echo $PYTHON_PATH'
-run_unbuffered "pip show pip"
+run_unbuffered "$PIP_PATH show pip"
 
 
 export -f download_data_sources
@@ -84,8 +95,8 @@ export -f download_data_sources
 run_unbuffered "bash -xc download_data_sources"
 # Run the original commands
 run_unbuffered "bash -x $SPEC_SCRIPT"
-run_unbuffered "pip install line_profiler[all]"
-run_unbuffered "pip install line_profiler"
+run_unbuffered "$PIP_PATH install line_profiler[all]"
+run_unbuffered "$PIP_PATH install line_profiler"
 
 
 echo "$PYTHON_PATH"
