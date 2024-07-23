@@ -3,3 +3,4 @@ log/
 edu_fineweb10B/
 train_data/
 profile_output*
+*.log

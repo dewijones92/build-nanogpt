@@ -14,20 +14,28 @@ export FINEWEB_SCRIPT="fineweb.py"
 export SPEC_SCRIPT="spec.sh"
 export TRAIN_SCRIPT="train_gpt2.py"
 export PROFILE_OUTPUT="profile_output.txt"
-
 set -x
+
+PYTHON_PATH=$(type -a python | awk '/aliased/ {print $NF}' | tr -d "'"); PYTHON_PATH="${PYTHON_PATH#\`}" && echo "$PYTHON_PATH"
+export PYTHON_PATH;
+
 # Generate a consistent filename for logging
 LOGFILE="$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S).goodlog"
 
 # Function to run a command with unbuffered output and log it
 run_unbuffered() {
     set -x
-    local cmd="$1"
-    ub $cmd |& \
-    ub ts |& \
-    ub tee >(ub cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
+    local cmd="$@"
+    ubf $cmd |& \
+    ubf ts |& \
+    ubf tee >(ubf cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
         "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
+
+ubf() {
+    stdbuf -i0 -o0 -e0 "$@"
+}
+export -f ubf
 
 # Function to download data sources
 download_data_sources() {
@@ -44,7 +52,7 @@ download_data_sources() {
         wget -P "$LOCAL_TRAIN_DATA_DIR"/ "$line"
     done < "$DATA_SOURCE_LIST"
     rm -rf "$LOCAL_FINEWEB_DIR"/*
-    python "$FINEWEB_SCRIPT" --source 2
+    $PYTHON_PATH "$FINEWEB_SCRIPT" --source 2
 }
 
 # Function to send profile output to server
@@ -57,12 +65,23 @@ send_profile_output() {
 # Set up trap to send profile output on script exit
 trap send_profile_output EXIT HUP INT QUIT TERM
 
+run_unbuffered 'echo $PYTHON_PATH'
+run_unbuffered "pip show pip"
+run_unbuffered "$PYTHON_PATH -m site --user-site"
+
+
+exit;
+
 export -f download_data_sources
 # Run the new download function
 run_unbuffered "bash -xc download_data_sources"
 # Run the original commands
 run_unbuffered "bash -x $SPEC_SCRIPT"
 run_unbuffered "pip install line_profiler[all]"
+run_unbuffered "pip install line_profiler"
+
+
+
 # Run the profiler and stream the output to the server
 export LINE_PROFILE=1; run_unbuffered "python $TRAIN_SCRIPT"
 # Optionally, you can also log the filename locally
