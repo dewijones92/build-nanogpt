@@ -16,16 +16,16 @@ export TRAIN_SCRIPT="train_gpt2.py"
 export PROFILE_OUTPUT="profile_output.txt"
 set -x
 
-PYTHON_PATH=$(type -a python | awk '/aliased/ {print $NF}' | tr -d "'")
+PYTHON_PATH=$(type -a python | awk '/aliased|\/python/ {print $NF; exit}' | tr -d "'")
 PYTHON_PATH=${PYTHON_PATH#\`}  # Remove leading backtick if present
-
 if [ -z "$PYTHON_PATH" ]; then
     echo "python empty"
     PYTHON_PATH="python"
 fi
-
 export PYTHON_PATH
 echo "$PYTHON_PATH"
+
+
 
 IP="$(curl -4 icanhazip.com)"
 
