@@ -16,8 +16,16 @@ export TRAIN_SCRIPT="train_gpt2.py"
 export PROFILE_OUTPUT="profile_output.txt"
 set -x
 
-PYTHON_PATH=$(type -a python | awk '/aliased/ {print $NF}' | tr -d "'"); PYTHON_PATH="${PYTHON_PATH#\`}" && echo "$PYTHON_PATH"
-export PYTHON_PATH;
+PYTHON_PATH=$(type -a python | awk '/aliased/ {print $NF}' | tr -d "'")
+
+if [ -z "$PYTHON_PATH" ]; then
+    echo "python empty"
+    PYTHON_PATH="python"
+fi
+
+export PYTHON_PATH
+echo "$PYTHON_PATH"
+
 
 # Generate a consistent filename for logging
 LOGFILE="$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S).goodlog"
