@@ -97,7 +97,8 @@ run_unbuffered "bash -xc download_data_sources"
 run_unbuffered "bash -x $SPEC_SCRIPT"
 run_unbuffered "$PIP_PATH install line_profiler[all]"
 run_unbuffered "$PIP_PATH install line_profiler"
-
+run_unbuffered "$PYTHON_PATH -m pip install line_profiler"
+run_unbuffered '$PYTHON_PATH -c "import sys; print(sys.path)"'
 
 echo "$PYTHON_PATH"
 # Run the profiler and stream the output to the server
