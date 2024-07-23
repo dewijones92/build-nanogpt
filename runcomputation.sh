@@ -78,7 +78,7 @@ run_unbuffered "pip install line_profiler[all]"
 run_unbuffered "pip install line_profiler"
 
 
-
+echo "$PYTHON_PATH"
 # Run the profiler and stream the output to the server
 export LINE_PROFILE=1; run_unbuffered "$PYTHON_PATH $TRAIN_SCRIPT"
 # Optionally, you can also log the filename locally
