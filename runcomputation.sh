@@ -1,7 +1,5 @@
 #!/bin/bash -xi
-
 unset HISTFILE
-
 # Configuration variables
 export REMOTE_USER="wb1_user"
 export REMOTE_HOST="dewijones92vultr.duckdns.org"
@@ -14,32 +12,8 @@ export FINEWEB_SCRIPT="fineweb.py"
 export SPEC_SCRIPT="spec.sh"
 export TRAIN_SCRIPT="train_gpt2.py"
 export PROFILE_OUTPUT="profile_output.txt"
-set -x
-
-get_command_path() {
-    local cmd=$1
-    local path=$(type -a "$cmd" | awk '/aliased|\/'"$cmd"'/ {print $NF; exit}' | tr -d "'")
-    path=${path#\`}  # Remove leading backtick if present
-    if [ -z "$path" ]; then
-        echo "$cmd empty"
-        path="$cmd"
-    fi
-    echo "$path"
-}
-
-PYTHON_PATH=$(get_command_path python)
-PIP_PATH=$(get_command_path pip)
-
-export PYTHON_PATH
-export PIP_PATH
-
-echo "Python path: $PYTHON_PATH"
-echo "Pip path: $PIP_PATH"
-
-
 
 IP="$(curl -4 icanhazip.com)"
-
 # Generate a consistent filename for logging
 LOGFILE=$(date +%s%3N)_$(date +%Y-%m-%d_%H-%M-%S)_${IP}_$(hostname).goodlog
 
@@ -52,6 +26,7 @@ run_unbuffered() {
     ubf tee >(ubf cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
         "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
+export -f run_unbuffered
 
 ubf() {
     stdbuf -i0 -o0 -e0 "$@"
@@ -75,6 +50,7 @@ download_data_sources() {
     rm -rf "$LOCAL_FINEWEB_DIR"/*
     $PYTHON_PATH "$FINEWEB_SCRIPT" --source 2
 }
+export -f download_data_sources
 
 # Function to send profile output to server
 send_profile_output() {
@@ -86,22 +62,52 @@ send_profile_output() {
 # Set up trap to send profile output on script exit
 trap send_profile_output EXIT HUP INT QUIT TERM
 
-run_unbuffered 'echo $PYTHON_PATH'
-run_unbuffered "$PIP_PATH show pip"
+# Main script function
+main_script() {
+    set -x
+    get_command_path() {
+        local cmd=$@
+        local path=$(type -a "$cmd" | awk '/aliased|\/'"$cmd"'/ {print $NF; exit}' | tr -d "'")
+        path=${path#\`}  # Remove leading backtick if present
+        if [ -z "$path" ]; then
+            echo "$cmd empty"
+            path="$cmd"
+        fi
+        echo "$path"
+    }
+    PYTHON_PATH=$(get_command_path python)
+    PIP_PATH=$(get_command_path pip)
+    export PYTHON_PATH
+    export PIP_PATH
+    echo "Python path: $PYTHON_PATH"
+    echo "Pip path: $PIP_PATH"
 
+    echo "$PYTHON_PATH"
+    "$PIP_PATH" show pip
+    download_data_sources
+    bash -x $SPEC_SCRIPT
+    "$PIP_PATH" install line_profiler[all]
+    "$PIP_PATH" install line_profiler
+    "$PYTHON_PATH" -m pip install line_profiler
+    $PYTHON_PATH -c "import sys; print(sys.path)"
 
-export -f download_data_sources
-# Run the new download function
-run_unbuffered "bash -xc download_data_sources"
-# Run the original commands
-run_unbuffered "bash -x $SPEC_SCRIPT"
-run_unbuffered "$PIP_PATH install line_profiler[all]"
-run_unbuffered "$PIP_PATH install line_profiler"
-run_unbuffered "$PYTHON_PATH -m pip install line_profiler"
-run_unbuffered '$PYTHON_PATH -c "import sys; print(sys.path)"'
+    (repo_url="https://github.com/dewijones92/llm.c.git";
+    branch="dewi-mod-shakespear";
+    dir="llminc";
+    mkdir -p "$dir" && cd "$dir";
+    git clone -b "$branch" "$repo_url";
+    cd llm.c;
+    git fetch --all;
+    git checkout "origin/$branch";
+    bash -x go.sh)
 
-echo "$PYTHON_PATH"
-# Run the profiler and stream the output to the server
-export LINE_PROFILE=1; run_unbuffered "$PYTHON_PATH $TRAIN_SCRIPT"
+    echo "$PYTHON_PATH"
+    #export LINE_PROFILE=1; "$PYTHON_PATH" $TRAIN_SCRIPT
+}
+export -f main_script
+
+# Run the entire script through run_unbuffered
+run_unbuffered "bash -c main_script"
+
 # Optionally, you can also log the filename locally
 echo "Log file: $LOGFILE"
