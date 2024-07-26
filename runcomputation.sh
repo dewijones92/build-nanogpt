@@ -90,7 +90,7 @@ main_script() {
     sudo apt-get update
     sudo apt-get -y install libcudnn9-dev-cuda-12
 
-    sudo apt install openmpi-bin openmpi-doc libopenmpi-dev
+    sudo apt install -y openmpi-bin openmpi-doc libopenmpi-dev
 
 
     (cd ~ && git clone -b main https://github.com/NVIDIA/cudnn-frontend.git)
