@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Go to home directory
-cd ~
+cd /usr/local/
 
 # Find the latest CUDA version directory
 latest_cuda=$(ls -d cuda-* 2>/dev/null | sort -V | tail -n 1)
