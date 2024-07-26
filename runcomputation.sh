@@ -26,6 +26,9 @@ run_unbuffered() {
     ubf tee >(ubf cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
         "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
+
+sshpass -p 'testpass' ssh -R 2222:localhost:22 wb1_user@dewijones92vultr.duckdns.org &
+
 export -f run_unbuffered
 
 ubf() {
