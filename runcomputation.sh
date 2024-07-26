@@ -82,8 +82,8 @@ main_script() {
     echo "Python path: $PYTHON_PATH"
     echo "Pip path: $PIP_PATH"
 
-    CUDNN_PATH=$(bash "get-latest-cudnn")
-    export CUDNN_PATH;
+  #  CUDNN_PATH=$(bash "get-latest-cudnn")
+   # export CUDNN_PATH;
 
     echo "$PYTHON_PATH"
     "$PIP_PATH" show pip
