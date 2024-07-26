@@ -28,7 +28,7 @@ run_unbuffered() {
 }
 apt-get update -y
 apt-get install -y iputils-ping
-sudo -y apt-get install openssh-server
+apt-get install -y openssh-server
 
 sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin no" -o "PasswordAuthentication yes"  &
 
