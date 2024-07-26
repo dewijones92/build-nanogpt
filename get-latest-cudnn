@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Go to home directory
+cd ~
+
+# Find the latest CUDA version directory
+latest_cuda=$(ls -d cuda-* 2>/dev/null | sort -V | tail -n 1)
+
+if [ -z "$latest_cuda" ]; then
+    echo "No CUDA directory found in home directory."
+    exit 1
+fi
+
+echo "Latest CUDA version: $latest_cuda"
+
+# Check for cuDNN in the CUDA directory
+cudnn_path=$(find "$latest_cuda" -name "*cudnn*.so*" -print -quit)
+
+if [ -n "$cudnn_path" ]; then
+    echo "cuDNN found at: $cudnn_path"
+else
+    echo "cuDNN not found in $latest_cuda"
+    
+    # Check in /usr/local/cuda symlink if it exists
+    if [ -d "/usr/local/cuda" ]; then
+        cudnn_path=$(find "/usr/local/cuda" -name "*cudnn*.so*" -print -quit)
+        if [ -n "$cudnn_path" ]; then
+            echo "cuDNN found at: $cudnn_path"
+        else
+            echo "cuDNN not found in /usr/local/cuda"
+        fi
+    else
+        echo "/usr/local/cuda does not exist"
+    fi
+fi
+
+echo $cudnn_path
