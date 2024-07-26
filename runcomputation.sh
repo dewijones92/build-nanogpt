@@ -44,7 +44,6 @@ sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin y
 
 sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vultr.duckdns.org &
 
-ping 1.1.1.1
 
 export -f run_unbuffered
 
