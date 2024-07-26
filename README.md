@@ -9,7 +9,7 @@
 
 # !set -xe;  pip install tiktoken; apt -y install moreutils; export PATH=$PATH:$(pwd); apt -y install sshpass; mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts ;export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git  || true;  cd build-nanogpt/; git fetch --all; git checkout origin/main  ; export PATH=$PATH:$(pwd); source runcomputation.sh
 
-
+# !(export CUDNN_FRONTEND_PATH="/usr/include/" ; cd build-nanogpt/llminc/llm.c && bash go.sh)
 
 
 This repo holds the from-scratch reproduction of [nanoGPT](https://github.com/karpathy/nanoGPT/tree/master). The git commits were specifically kept step by step and clean so that one can easily walk through the git commit history to see it built slowly. Additionally, there is an accompanying [video lecture on YouTube](https://youtu.be/l8pRSuU81PU) where you can see me introduce each commit and explain the pieces along the way.
