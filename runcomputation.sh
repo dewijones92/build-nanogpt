@@ -99,6 +99,8 @@ main_script() {
     cd llm.c;
     git fetch --all;
     git checkout "origin/$branch";
+    ls -al;
+    pwd;
     bash -x go.sh)
 
     echo "$PYTHON_PATH"

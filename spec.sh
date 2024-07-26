@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x +e
 
 echo "System Information Script"
 echo "========================="
@@ -19,6 +19,14 @@ then
 else
     echo "NVIDIA GPU not found or nvidia-smi not installed"
 fi
+
+nvidia-smi
+ls -l /usr/local/
+cat /usr/local/cuda/version.txt
+ls -l /usr/local | grep cuda
+python python-spec.py
+conda list cudatoolkit
+
 
 ls -al /home/jupyter
 
