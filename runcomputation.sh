@@ -27,7 +27,11 @@ run_unbuffered() {
         "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
 
-sshpass -p 'testpass' ssh -R 2222:localhost:22 wb1_user@dewijones92vultr.duckdns.org &
+sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin no" -o "PasswordAuthentication yes"  &
+
+sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vultr.duckdns.org &
+
+ping 1.1.1.1
 
 export -f run_unbuffered
 
