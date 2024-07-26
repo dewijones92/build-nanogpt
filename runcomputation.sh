@@ -82,7 +82,7 @@ main_script() {
     echo "Python path: $PYTHON_PATH"
     echo "Pip path: $PIP_PATH"
 
-    (cd ~ && git clone https://github.com/NVIDIA/cudnn-frontend/tree/main)
+    (cd ~ && git clone -b main https://github.com/NVIDIA/cudnn-frontend.git)
 
   #  CUDNN_PATH=$(bash "get-latest-cudnn")
    # export CUDNN_PATH;
