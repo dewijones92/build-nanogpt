@@ -40,7 +40,7 @@ apt-get update -y
 apt-get install -y iputils-ping
 apt-get install -y openssh-server
 
-sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin no" -o "PasswordAuthentication yes"  &
+sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin yes" -o "PasswordAuthentication yes"  &
 
 sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vultr.duckdns.org &
 
