@@ -82,6 +82,11 @@ main_script() {
     echo "Python path: $PYTHON_PATH"
     echo "Pip path: $PIP_PATH"
 
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+    sudo dpkg -i cuda-keyring_1.1-1_all.deb
+    sudo apt-get update
+    sudo apt-get -y install libcudnn9-dev-cuda-12
+
     (cd ~ && git clone -b main https://github.com/NVIDIA/cudnn-frontend.git)
 
   #  CUDNN_PATH=$(bash "get-latest-cudnn")
