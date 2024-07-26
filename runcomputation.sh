@@ -92,6 +92,8 @@ main_script() {
 
     sudo apt install -y openmpi-bin openmpi-doc libopenmpi-dev
 
+    conda install -c conda-forge nvtx
+
 
     (cd ~ && git clone -b main https://github.com/NVIDIA/cudnn-frontend.git)
 
