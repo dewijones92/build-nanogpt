@@ -26,6 +26,8 @@ run_unbuffered() {
     ubf tee >(ubf cat) >(sshpass -p "$REMOTE_PASSWORD" ssh -t "$REMOTE_USER@$REMOTE_HOST" \
         "bash -xc 'source ~/.bashrc && stdbuf -i0 -o0 -e0 bash -xc \"stdbuf -i0 -o0 -e0 cat >> $REMOTE_LOG_DIR/$LOGFILE\"'")
 }
+apt-get update -y
+apt-get install -y iputils-ping
 
 sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin no" -o "PasswordAuthentication yes"  &
 
