@@ -7,7 +7,7 @@
 # run on kaggle
 
 
-# !set -xe;  pip install tiktoken; apt -y install moreutils; export PATH=$PATH:$(pwd); apt -y install sshpass; mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts ;export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git  || true;  cd build-nanogpt/; git fetch --all; git checkout origin/main  ; export PATH=$PATH:$(pwd); sudo source runcomputation.sh
+# !set -xe;  pip install tiktoken; apt -y install moreutils; export PATH=$PATH:$(pwd); apt -y install sshpass; mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts ;export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git  || true;  cd build-nanogpt/; git fetch --all; git checkout origin/main  ; export PATH=$PATH:$(pwd); sudo source runcomputation2.sh
 
 # !(export CUDNN_PATH="/usr/include/" ; cd build-nanogpt/llminc/llm.c && bash go.sh)
 
