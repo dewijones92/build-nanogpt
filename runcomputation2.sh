@@ -6,7 +6,9 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
-sudo systemctl restart docker
+sudo /etc/init.d/docker stop
+sudo /etc/init.d/docker start
+
 nvidia-ctk runtime configure --runtime=docker --config=$HOME/.config/docker/daemon.json
 sudo /etc/init.d/docker start
 sudo nvidia-ctk config --set nvidia-container-cli.no-cgroups --in-place
