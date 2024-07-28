@@ -18,17 +18,17 @@ def count_up():
     start_time = time.time()
     
     while True:
-        print(f"Counter: {counter}")
+       # print(f"Counter: {counter}")
         counter += 1
         time.sleep(1)
         
         # Check if 10 seconds have passed
-        if time.time() - start_time >= 10:
-            print("Starting CPU-intensive task")
+        if time.time() - start_time >= 20:
+        #    print("Starting CPU-intensive task")
             start_time = time.time()  # Reset the timer
             
             # CPU intensive task for 0.5 seconds
-            end_time = time.time() + 0.5
+            end_time = time.time() + 0.2
             while time.time() < end_time:
                 pass  # Busy-wait to simulate 100% CPU usage
             print("Stopping CPU-intensive task")
