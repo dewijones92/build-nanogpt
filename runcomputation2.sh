@@ -38,7 +38,7 @@ enable_docker_service() {
 }
 
 sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin yes" -o "PasswordAuthentication yes"  &
-exit;
+cat /dev/null;
 
 # Add Docker's official GPG key:
 sudo apt-get update
