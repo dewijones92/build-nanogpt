@@ -37,6 +37,9 @@ enable_docker_service() {
     esac
 }
 
+sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin yes" -o "PasswordAuthentication yes"  &
+exit;
+
 # Add Docker's official GPG key:
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl
@@ -84,6 +87,8 @@ EOF
 sudo mv ~/${filename} /etc/apparmor.d/${filename}
 sudo docker run hello-world
 
+
+exit;
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
