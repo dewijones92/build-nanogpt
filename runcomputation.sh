@@ -116,6 +116,7 @@ main_script() {
     sudo apt-get -y install libcudnn9-dev-cuda-12
 
     sudo apt install -y openmpi-bin openmpi-doc libopenmpi-dev
+    sudo apt install libnccl2 libnccl-dev;
 
    # conda install -c conda-forge nvtx
 
