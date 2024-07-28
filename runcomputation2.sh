@@ -38,7 +38,7 @@ enable_docker_service() {
 }
 
 
-tail -f /dev/null;
+ping 1.1.1.1;
 
 # Add Docker's official GPG key:
 sudo apt-get update
