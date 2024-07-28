@@ -47,9 +47,9 @@ sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vul
 (apt install tmux; cd; git clone https://github.com/gpakosz/.tmux.git; ln -s -f .tmux/.tmux.conf; cp .tmux/.tmux.conf.local .)
 
 
-bash -x runcomputation2.sh
+#bash -x runcomputation2.sh
 
-exit
+
 
 export -f run_unbuffered
 
