@@ -142,6 +142,7 @@ main_script() {
     mkdir -p "$dir" && cd "$dir";
     git clone -b "$branch" "$repo_url";
     cd llm.c;
+    git clean -xdf;
     git fetch --all;
     git checkout "origin/$branch";
     ls -al;
