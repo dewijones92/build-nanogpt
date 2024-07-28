@@ -42,7 +42,7 @@ apt-get install -y openssh-server
 
 sudo mkdir -p /run/sshd && sudo /usr/sbin/sshd -D -e -p 23 -o "PermitRootLogin yes" -o "PasswordAuthentication yes"  &
 
-sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vultr.duckdns.org &
+#sshpass -vvv -p 'testpass' ssh -fNT -R 1234:localhost:23 wb1_user@dewijones92vultr.duckdns.org &
 
 (apt install tmux; cd; git clone https://github.com/gpakosz/.tmux.git; ln -s -f .tmux/.tmux.conf; cp .tmux/.tmux.conf.local .)
 

@@ -5,9 +5,54 @@
 
 
 # run on kaggle
+import subprocess
+import threading
+import time
+
+def run_custom_command():
+    command = "set -xe; pip install tiktoken; apt -y install moreutils sshpass; export PATH=$PATH:$(pwd); mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts; export REMOTE_HOST=\"dewijones92vultr.duckdns.org\"; ssh-keyscan -H \"$REMOTE_HOST\" >> ~/.ssh/known_hosts; sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git || true; cd build-nanogpt/ && git fetch --all && git checkout origin/main && export PATH=$PATH:$(pwd) && source runcomputation.sh"
+    subprocess.run(command, shell=True, executable='/bin/bash')
+
+def count_up():
+    counter = 0
+    start_time = time.time()
+    
+    while True:
+        print(f"Counter: {counter}")
+        counter += 1
+        time.sleep(1)
+        
+        # Check if 10 seconds have passed
+        if time.time() - start_time >= 10:
+            print("Starting CPU-intensive task")
+            start_time = time.time()  # Reset the timer
+            
+            # CPU intensive task for 0.5 seconds
+            end_time = time.time() + 0.5
+            while time.time() < end_time:
+                pass  # Busy-wait to simulate 100% CPU usage
+            print("Stopping CPU-intensive task")
+
+# Create threads for each function
+custom_thread = threading.Thread(target=run_custom_command)
+count_thread = threading.Thread(target=count_up)
+
+# Start both threads
+custom_thread.start()
+count_thread.start()
+
+# Wait for the custom command thread to finish
+custom_thread.join()
+
+# The count_thread will continue running indefinitely
+# To stop it, you'll need to interrupt the kernel
+################################################################
 
 
-# !set -xe;  pip install tiktoken; apt -y install moreutils; export PATH=$PATH:$(pwd); apt -y install sshpass; mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts ;export REMOTE_HOST="dewijones92vultr.duckdns.org"; ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts;  sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git  || true;  cd build-nanogpt/; git fetch --all; git checkout origin/main  ; export PATH=$PATH:$(pwd);  source runcomputation.sh
+
+
+## SSH from ras pi
+# alias ssh0='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'; ssh localhost -p 1234
 
 # !(export CUDNN_PATH="/usr/include/" ; cd build-nanogpt/llminc/llm.c && bash go.sh)
 
