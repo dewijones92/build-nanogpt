@@ -10,7 +10,7 @@ import threading
 import time
 
 def run_custom_command():
-    command = "set -xe; pip install tiktoken; apt -y install moreutils sshpass; export PATH=$PATH:$(pwd); mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts; export REMOTE_HOST=\"dewijones92vultr.duckdns.org\"; ssh-keyscan -H \"$REMOTE_HOST\" >> ~/.ssh/known_hosts; sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git || true; cd build-nanogpt/ && git fetch --all && git checkout origin/main && export PATH=$PATH:$(pwd) && source runcomputation.sh"
+    command = "set -xe; pip install tiktoken; apt -y install moreutils sshpass; export PATH=$PATH:$(pwd); mkdir -p ~/.ssh/; touch ~/.ssh/known_hosts; export REMOTE_HOST=\"dewijones92vultr.duckdns.org\"; ssh-keyscan -H \"$REMOTE_HOST\" >> ~/.ssh/known_hosts; sshpass -p 'testpass' git clone https://github.com/dewijones92/build-nanogpt.git || true; cd build-nanogpt/ && git status -vvv; git fetch --all && git checkout origin/main && export PATH=$PATH:$(pwd) && source runcomputation.sh"
     subprocess.run(command, shell=True, executable='/bin/bash')
 
 def count_up():
